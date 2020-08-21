@@ -58,10 +58,10 @@ prices = [item.text for item in driver.find_elements_by_xpath(
 prices = [item.split('\n')[:2] for item in prices]
 prices = [[x for x in item if not any(c.isalpha() for c in x)] for item in prices]
 
-old_price = [float(item[0]) for item in prices]
+old_price = [float(item[0]) if len(item) > 1 else 'N/A' for item in prices]
 new_price = [float(item[1]) if len(item) > 1 else float(item[0]) for item in prices]
 
-perc_discount = [round(1 - new / old, 3) for new, old in zip(new_price, old_price)]
+perc_discount = [round(1 - new / old, 3) if isinstance(old, float) else 'N/A' for new, old in zip(new_price, old_price)]
 
 # extract product names and descriptions
 full_text = [item.text.split("\n") for item in
@@ -132,47 +132,22 @@ bonus_folder_feature = [True if item in bonus_feature else False for item in pro
 # assign product order/placement
 product_placement = range(len(product_name))
 
-df = pd.DataFrame(dict(start_date=start_date, end_date=end_date, week_number=week_number, category=category,
-                       bonus_folder_feature=bonus_folder_feature, old_price=old_price, new_price=new_price,
-                       perc_discount=perc_discount, discount_type=discount_type, product_name=product_name,
-                       product_description=product_description, brand=c, product_placement=product_placement))
-
-df.sort_values(['bonus_folder_feature', 'product_placement'], ascending=[False, True], inplace=True)
-
 product_name_split = [item.lower().split(' ') for item in product_name]
 
 brands = list(set([subitem for item in pd.read_csv('ah_brands.csv').values.tolist() for subitem in item]))
 
 article_brand = [', '.join(list(set([brand for brand in brands if all(item in product for item in brand.lower().split(' '))]))) for product in product_name_split]
 
-art_brand_over = [set([brand for brand in brands if any(item in product for item in brand.lower().split(' '))]) for product in product_name_split]
+df = pd.DataFrame(dict(start_date=start_date, end_date=end_date, week_number=week_number, category=category,
+                       product_placement=product_placement, product_name=product_name,
+                       product_description=product_description, brand=article_brand,
+                       bonus_folder_feature=bonus_folder_feature, old_price=old_price, new_price=new_price,
+                       perc_discount=perc_discount, discount_type=discount_type))
 
-
-[item for item in article_brand]
-
-c = [set([brand if all(item in product for item in brand.lower().split(' ')) \
-                             else brand if any(item in product for item in brand.lower().split(' ')) else None for brand in brands]) for product in product_name_split]
-
-c = [list(set([brand for brand in brands if all(item in product for item in brand.lower().split(' '))])) for product in product_name_split]
-
-[set([brand if all(item in product for item in brand.lower().split(' ')) else brand if any(item in product for item in brand.lower().split(' ')) else [''] for brand in brands]) for product in product_name_split]
-
-c = [set([brand for brand in brands if any(item in product for item in brand.lower().split(' '))]) for product in product_name_split]
-
-
-d = [brand if brand != '' else brand_any for brand in article_brand for brand_any in art_brand_over]
-type(article_brand[58])
-
-any(word in product_name_split[58] for word in brands[3524].lower().split(' '))
-
-product_name_split[58]
-brands[3524]
+df.sort_values(['bonus_folder_feature', 'product_placement'], ascending=[False, True], inplace=True)
 
 # save to excel and open
 df.to_excel('AH_Bonus_week_{}.xlsx'.format(week_number))
 os.startfile('AH_Bonus_week_{}.xlsx'.format(week_number))
 
-# save webpage as html
-with open("AH_Bonus_week_{}.html".format(week_number), "w") as f:
-    f.write(driver.page_source)
 
