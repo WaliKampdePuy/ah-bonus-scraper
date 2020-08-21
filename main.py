@@ -9,18 +9,15 @@ import time
 import datetime
 import os
 
-# incognito argument
-option = webdriver.ChromeOptions()
-option.add_argument(' — incognito')
-
-# new Chrome instance
+# new incognito Chrome instance
+option = webdriver.ChromeOptions().add_argument(' — incognito')
 driver = webdriver.Chrome(executable_path="chromedriver.exe", chrome_options=option)
 driver.maximize_window()
 
 # get the page
 driver.get('https://www.ah.nl/bonus')
 
-# Wait 20 seconds for page to load
+# set max page load time (sec)
 timeout = 20
 
 try:
@@ -70,50 +67,50 @@ full_text = [item.text.split("\n") for item in
 product_name = [item[0] for item in full_text]
 product_description = [" ".join(item) if len(item) > 0 else "" for item in [item[1:] for item in full_text]]
 
-# extract discounts and assign type
+# assign discount type
 def discount_type_fun(descriptions):
     discount_type = []
     for i in range(len(descriptions)):
-    if 'stapel' in descriptions[i].lower():
-        discount_type.append('stapelkorting')
-    elif '1 + 1' in descriptions[i].lower():
-        discount_type.append('1 plus 1')
-    elif '2=1' in descriptions[i].lower():
-        discount_type.append('1 plus 1')
-    elif '2 + 1' in descriptions[i].lower():
-        discount_type.append('2 plus 1')
-    elif '2 + 2' in descriptions[i].lower():
-        discount_type.append('2 plus 2')
-    elif '1 + 2' in descriptions[i].lower():
-        discount_type.append('1 plus 2')
-    elif '3 + 1' in descriptions[i].lower():
-        discount_type.append('3 plus 1')
-    elif '4 + 1' in descriptions[i].lower():
-        discount_type.append('4 plus 1')
-    elif '%' in descriptions[i].lower():
-        discount_type.append('%')
-    elif '2 voor' in descriptions[i].lower():
-        discount_type.append('2 voor')
-    elif '3 voor' in descriptions[i].lower():
-        discount_type.append('3 voor')
-    elif '4 voor' in descriptions[i].lower():
-        discount_type.append('4 voor')
-    elif '5 voor' in descriptions[i].lower():
-        discount_type.append('5 voor')
-    elif 'voor' in descriptions[i].lower():
-        discount_type.append('voor')
-    elif '2e halve prijs' in descriptions[i].lower():
-        discount_type.append('2e halve prijs')
-    elif '1 euro korting' in descriptions[i].lower():
-        discount_type.append('1 euro korting')
-    elif 'bonus' in descriptions[i].lower():
-        discount_type.append('bonus')
-    else:
-        discount_type.append('other')
+        if 'stapel' in descriptions[i].lower():
+            discount_type.append('stapelkorting')
+        elif '1 + 1' in descriptions[i].lower():
+            discount_type.append('1 plus 1')
+        elif '2=1' in descriptions[i].lower():
+            discount_type.append('1 plus 1')
+        elif '2 + 1' in descriptions[i].lower():
+            discount_type.append('2 plus 1')
+        elif '2 + 2' in descriptions[i].lower():
+            discount_type.append('2 plus 2')
+        elif '1 + 2' in descriptions[i].lower():
+            discount_type.append('1 plus 2')
+        elif '3 + 1' in descriptions[i].lower():
+            discount_type.append('3 plus 1')
+        elif '4 + 1' in descriptions[i].lower():
+            discount_type.append('4 plus 1')
+        elif '%' in descriptions[i].lower():
+            discount_type.append('%')
+        elif '2 voor' in descriptions[i].lower():
+            discount_type.append('2 voor')
+        elif '3 voor' in descriptions[i].lower():
+            discount_type.append('3 voor')
+        elif '4 voor' in descriptions[i].lower():
+            discount_type.append('4 voor')
+        elif '5 voor' in descriptions[i].lower():
+            discount_type.append('5 voor')
+        elif 'voor' in descriptions[i].lower():
+            discount_type.append('voor')
+        elif '2e halve prijs' in descriptions[i].lower():
+            discount_type.append('2e halve prijs')
+        elif '1 euro korting' in descriptions[i].lower():
+            discount_type.append('1 euro korting')
+        elif 'bonus' in descriptions[i].lower():
+            discount_type.append('bonus')
+        else:
+            discount_type.append('other')
     return discount_type
 
-discount_type = discount_type_fun([item.text for item in driver.find_elements_by_xpath('//*[@id="app"]/main/div[2]/div/div/section[4]/div/div/\
-                                   article/div/a/div[2]//div[contains(@class, "shield_root__2R2LQ")]')])
+discount_type = discount_type_fun([item.text for item in driver.find_elements_by_xpath(
+    '//*[@id="app"]/main/div[2]/div/div/section[4]/div/div/article/div/a/div[2]//div[contains(@class, "shield_root__2R2LQ")]')])
 
 # extract category names and lengths
 category_list = [item.text for item in driver.find_elements_by_xpath(
@@ -132,12 +129,13 @@ bonus_folder_feature = [True if item in bonus_feature else False for item in pro
 # assign product order/placement
 product_placement = range(len(product_name))
 
+# assign brand
 product_name_split = [item.lower().split(' ') for item in product_name]
-
 brands = list(set([subitem for item in pd.read_csv('ah_brands.csv').values.tolist() for subitem in item]))
+article_brand = [', '.join(list(set([brand for brand in brands if all(item in product for item in brand.lower().split(' '))])))
+                 for product in product_name_split]
 
-article_brand = [', '.join(list(set([brand for brand in brands if all(item in product for item in brand.lower().split(' '))]))) for product in product_name_split]
-
+# compile into dataframe
 df = pd.DataFrame(dict(start_date=start_date, end_date=end_date, week_number=week_number, category=category,
                        product_placement=product_placement, product_name=product_name,
                        product_description=product_description, brand=article_brand,
